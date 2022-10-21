@@ -102,6 +102,7 @@ Instance readTspFile(char *fileName)
 
 } // readTspFile
 
+
 void saveTour(Instance instance, int* rota){
   char filename[100];
 
@@ -375,10 +376,49 @@ float run2opt(Instance instance, int *rota)
       }   // for
     }     // for
     distancia = fitness(instance, rota);
-    printf("Distancia atual 2opt %f\n",distancia);
+    //printf("Distancia atual 2opt %f\n",distancia);
   }       // while
   return distancia;
 } // run2opt
+
+
+float run2vert(Instance instance, int *rota)
+{
+  int node1;
+  int node2;
+  int troca;
+  float menorDistancia = fitness(instance, rota);
+  float distancia;
+  bool melhorou = true;
+
+  while (melhorou)
+  {
+    melhorou = false;
+    for (node1 = 0; node1 < instance.dimension; node1++)
+    {
+      for (node2 = node1 + 1; node2 < instance.dimension-1; node2++)
+      {
+        troca = rota[node1];
+        rota[node1] = rota[node2];
+        rota[node2] = troca;
+
+        distancia = fitness(instance,rota);
+
+        if (distancia < menorDistancia)
+        {
+          menorDistancia = distancia;          
+        }else{
+          troca = rota[node1];
+          rota[node1] = rota[node2];
+          rota[node2] = troca;
+        }
+      }   // for
+    }     // for
+    distancia = fitness(instance, rota);
+    //printf("Distancia atual 2opt %f\n",distancia);
+  }       // while
+  return distancia;
+} // run2vert
 
 
 int main(int argc, char **argv)
@@ -389,11 +429,11 @@ int main(int argc, char **argv)
   int *rota = NULL;
   float distancia;
   float minDistancia = INFINITY;
-  Instance instance = readTspFile("data/star10k.tsp");
+  Instance instance = readTspFile("data/star1k.tsp");
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
 
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < 1000; i++)
   {
     free(rota);
 
