@@ -104,7 +104,7 @@ Instance readTspFile(char *fileName)
 
 
 void saveTour(Instance instance, int* rota){
-  char filename[100];
+  char filename[120];
 
   sprintf(filename,"results/%s.tour",instance.nome);
   FILE* file = fopen(filename,"w");
@@ -126,6 +126,13 @@ void saveTour(Instance instance, int* rota){
   fclose(file);
 
 }//saveTour
+
+float distance(int o,int d, Instance instance){
+  return sqrt(
+          (instance.nodes[o].x - instance.nodes[d].x)*(instance.nodes[o].x - instance.nodes[d].x) +
+          (instance.nodes[o].y - instance.nodes[d].y)*(instance.nodes[o].y - instance.nodes[d].y) +
+          (instance.nodes[o].z - instance.nodes[d].z)*(instance.nodes[o].z - instance.nodes[d].z);
+}//distance
 
 Instance displayInstance(Instance instance)
 {
@@ -365,7 +372,10 @@ float run2opt(Instance instance, int *rota)
     {
       for (node2 = node1 + 1; node2 < instance.dimension-1; node2++)
       {
-        delta = -instance.distances[rota[node1]][rota[(node1 + 1) % instance.dimension]] - instance.distances[rota[node2]][rota[(node2 + 1) % instance.dimension]] + instance.distances[rota[node1]][rota[(node2) % instance.dimension]] + instance.distances[rota[(node1 + 1) % instance.dimension]][rota[(node2 + 1) % instance.dimension]];
+        delta = -instance.distances[rota[node1]][rota[(node1 + 1) % instance.dimension]] 
+                -instance.distances[rota[node2]][rota[(node2 + 1) % instance.dimension]]
+                +instance.distances[rota[node1]][rota[(node2) % instance.dimension]]
+                +instance.distances[rota[(node1 + 1) % instance.dimension]][rota[(node2 + 1) % instance.dimension]];
 
         if (delta < -0.001)
         {
@@ -387,36 +397,44 @@ float run2vert(Instance instance, int *rota)
   int node1;
   int node2;
   int troca;
-  float menorDistancia = fitness(instance, rota);
-  float distancia;
+  float distancia = fitness(instance, rota);
+  float delta;
+
   bool melhorou = true;
 
   while (melhorou)
   {
     melhorou = false;
-    for (node1 = 0; node1 < instance.dimension; node1++)
+    for (node1 = 1; node1 < instance.dimension-1; node1++)
     {
-      for (node2 = node1 + 1; node2 < instance.dimension-1; node2++)
+      for (node2 = node1 + 2; node2 < instance.dimension; node2++)
       {
-        troca = rota[node1];
-        rota[node1] = rota[node2];
-        rota[node2] = troca;
-
-        distancia = fitness(instance,rota);
-
-        if (distancia < menorDistancia)
+        delta = -instance.distances[rota[node1]][rota[(node1 + 1) % instance.dimension]]
+                -instance.distances[rota[node1]][rota[(node1 - 1) ]]
+                -instance.distances[rota[node2]][rota[(node2 + 1) % instance.dimension]]
+                -instance.distances[rota[node2]][rota[(node2 - 1) ]]
+                +instance.distances[rota[node1]][rota[(node2 + 1) % instance.dimension]]
+                +instance.distances[rota[node1]][rota[(node2 - 1) ]]
+                +instance.distances[rota[node2]][rota[(node1 + 1) % instance.dimension]]
+                +instance.distances[rota[node2]][rota[(node1 - 1) ]];
+        
+        
+        if (delta < -0.001)
         {
-          menorDistancia = distancia;          
-        }else{
           troca = rota[node1];
           rota[node1] = rota[node2];
           rota[node2] = troca;
+
+          distancia += delta;  
+          melhorou = true;        
         }
-      }   // for
-    }     // for
-    distancia = fitness(instance, rota);
-    //printf("Distancia atual 2opt %f\n",distancia);
-  }       // while
+
+
+      }// for
+    }// for
+    printf("\r Distancia atual 2opt %f",distancia);
+  }// while
+  distancia = fitness(instance, rota);
   return distancia;
 } // run2vert
 
@@ -429,32 +447,31 @@ int main(int argc, char **argv)
   int *rota = NULL;
   float distancia;
   float minDistancia = INFINITY;
-  Instance instance = readTspFile("data/star1k.tsp");
+  Instance instance = readTspFile("data/star10k.tsp");
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
 
-  for (int i = 0; i < 1000; i++)
+  for (int i = 0; i < 10; i++)
   {
     free(rota);
 
 
-    // rota = geraRotaAleatoria(instance.dimension);
+    //rota = geraRotaAleatoria(instance.dimension);
     // rota = geraRotaGulosa(instance);
     rota = geraRotaGrasp(instance, (rand()%5)/100.0);
     
-    distancia = fitness(instance, rota);
+    //distancia = fitness(instance, rota);
     //printf("Distancia GRASP= %f\n", distancia);
 
-    distancia = run2opt(instance, rota);
-    distancia = fitness(instance, rota);
-
-    printf("\r%02d - Distancia 2-OPT= %f - Minimo atual: %f", i, distancia, minDistancia);
-    fflush(stdin);
+    distancia = run2vert(instance, rota);
+    //distancia = fitness(instance, rota);
   
     if (distancia < minDistancia)
     {
       minDistancia = distancia;
       memcpy(melhorRota,rota,instance.dimension * sizeof(int));
+      printf("\r%02d - Distancia 2-OPT= %f - Minimo atual: %f", i, distancia, minDistancia);
+      fflush(stdout);
     }
 
     // distancia = runSa2opt(instance, rota);
