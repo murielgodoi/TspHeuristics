@@ -13,6 +13,8 @@
 #include <time.h>
 #include <stdbool.h>
 
+#define BUILDMATRIX false
+
 typedef struct
 {
   float x;
@@ -32,7 +34,11 @@ typedef struct
   bool buildMatrix;
 } Instance;
 
+
+//Headers
 float fitness(Instance instance, int *rota);
+float distance(int, int, Instance);
+
 
 Instance readTspFile(char *fileName, bool buildMatrix)
 {
@@ -73,7 +79,7 @@ Instance readTspFile(char *fileName, bool buildMatrix)
   } // for
   printf("OK\n");
 
-  if(buildMatrix){
+  if(BUILDMATRIX){
   // Aloca a metriz de distancias dinamicamente
   printf("Alocando matriz de distancias...");
   instance.distances = (float **)malloc(instance.dimension * sizeof(float *));
@@ -131,11 +137,15 @@ void saveTour(Instance instance, int* rota){
 
 }//saveTour
 
-inline float distance(int o,int d, Instance instance){
-  return sqrt(
+float distance(int o,int d, Instance instance){
+  if(BUILDMATRIX){
+    return instance.distances[o][d];
+  }else{
+    return sqrt(
           (instance.nodes[o].x - instance.nodes[d].x)*(instance.nodes[o].x - instance.nodes[d].x) +
           (instance.nodes[o].y - instance.nodes[d].y)*(instance.nodes[o].y - instance.nodes[d].y) +
           (instance.nodes[o].z - instance.nodes[d].z)*(instance.nodes[o].z - instance.nodes[d].z));
+  }//else
 }//distance
 
 Instance displayInstance(Instance instance)
@@ -457,16 +467,16 @@ double calculaTempo(clock_t initialTick){
 
 int main(int argc, char **argv)
 {
-  srand(time(NULL));
-  // srand(1);
+  //srand(time(NULL));
+  srand(1);
 
   clock_t initialTick = clock();
 
   int *rota = NULL;
   float distancia;
   float minDistancia = INFINITY;
-  //Instance instance = readTspFile("data/star1k.tsp", false);
-  Instance instance = readTspFile("data/hyg109399.tsp", false);
+  Instance instance = readTspFile("data/star100.tsp", false);
+  //Instance instance = readTspFile("data/star10k.tsp", false);
 
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
@@ -481,7 +491,7 @@ int main(int argc, char **argv)
     rota = geraRotaGrasp(instance, (rand()%5)/100.0);
     
     distancia = fitness(instance, rota);
-    printf("%lf - Distancia GRASP= %f\n", calculaTempo(initialTick), distancia);
+    printf("%lf - GRASP= %f - ", calculaTempo(initialTick), distancia);
 
     distancia = run2opt(instance, rota);
     //distancia = fitness(instance, rota);
@@ -493,7 +503,7 @@ int main(int argc, char **argv)
       saveTour(instance,melhorRota);
     }
 
-      printf("\n %lf - %02d - Distancia 2-OPT= %f - Minimo atual: %f", calculaTempo(initialTick), i, distancia, minDistancia);
+      printf("%lf - %02d - 2-OPT= %f - Best: %f\n", calculaTempo(initialTick), i, distancia, minDistancia);
       fflush(stdout);
     // distancia = runSa2opt(instance, rota);
     // printf("Distancia 2opt + SA = %f\n", distancia);
