@@ -38,6 +38,7 @@ typedef struct
 //Headers
 float fitness(Instance instance, int *rota);
 float distance(int, int, Instance);
+char* getTimeStamp();
 
 
 Instance readTspFile(char *fileName, bool buildMatrix)
@@ -115,8 +116,9 @@ Instance readTspFile(char *fileName, bool buildMatrix)
 
 void saveTour(Instance instance, int* rota){
   char filename[120];
+  char* timestamp = getTimeStamp();
 
-  sprintf(filename,"results/%s.tour",instance.nome);
+  sprintf(filename,"results/%s - %s.tour",instance.nome,timestamp);
   FILE* file = fopen(filename,"w");
   
   fprintf(file, "NAME : %s.tour\n",instance.nome);
@@ -134,6 +136,7 @@ void saveTour(Instance instance, int* rota){
   fprintf(file, "EOF\n");
 
   fclose(file);
+  free(timestamp);
 
 }//saveTour
 
@@ -464,6 +467,22 @@ double calculaTempo(clock_t initialTick){
   return (double)(clock() - initialTick) / (CLOCKS_PER_SEC);
 }
 
+char* getTimeStamp(){
+  char* buffer = (char*) malloc(100* sizeof(char));
+  time_t rawtime;
+  struct tm * timeinfo;
+
+
+  time ( &rawtime );
+  timeinfo = localtime ( &rawtime );
+
+  sprintf(buffer, "%d %d %d %d:%d:%d", timeinfo->tm_mday,
+            timeinfo->tm_mon + 1, timeinfo->tm_year + 1900,
+            timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+  return buffer;
+
+}//timeStamp
+
 
 int main(int argc, char **argv)
 {
@@ -475,11 +494,12 @@ int main(int argc, char **argv)
   int *rota = NULL;
   float distancia;
   float minDistancia = INFINITY;
-  Instance instance = readTspFile("data/star100.tsp", false);
+  Instance instance = readTspFile("data/star1k.tsp", false);
   //Instance instance = readTspFile("data/star10k.tsp", false);
 
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
+
 
   for (int i = 0; i < 10000; i++)
   {
