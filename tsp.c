@@ -29,15 +29,17 @@ typedef struct
   char edgeWeightType[20];
   Coordenada *nodes;
   float **distances;
+  bool buildMatrix;
 } Instance;
 
 float fitness(Instance instance, int *rota);
 
-Instance readTspFile(char *fileName)
+Instance readTspFile(char *fileName, bool buildMatrix)
 {
   char buffer[100];
   char field[100];
   Instance instance;
+  instance.buildMatrix = buildMatrix;
 
   printf("Abrindo arquivo %s\n", fileName);
   // Abre o arquivo .tsp
@@ -71,6 +73,7 @@ Instance readTspFile(char *fileName)
   } // for
   printf("OK\n");
 
+  if(buildMatrix){
   // Aloca a metriz de distancias dinamicamente
   printf("Alocando matriz de distancias...");
   instance.distances = (float **)malloc(instance.dimension * sizeof(float *));
@@ -80,23 +83,24 @@ Instance readTspFile(char *fileName)
   } // for
   printf("OK\n");
 
-  printf("Calculando matriz de distancias...");
-  // Calcula a matriz de distancias entre as estrelas
-  for (int i = 0; i < instance.dimension; i++)
-  {
-    for (int j = i; j < instance.dimension; j++)
+    printf("Calculando matriz de distancias...");
+    // Calcula a matriz de distancias entre as estrelas
+    for (int i = 0; i < instance.dimension; i++)
     {
-      instance.distances[i][j] = sqrt(
-          pow(instance.nodes[i].x - instance.nodes[j].x, 2) +
-          pow(instance.nodes[i].y - instance.nodes[j].y, 2) +
-          pow(instance.nodes[i].z - instance.nodes[j].z, 2));
-      instance.distances[j][i] = instance.distances[i][j];
-      
+      for (int j = i; j < instance.dimension; j++)
+      {
+        instance.distances[i][j] = sqrt(
+            pow(instance.nodes[i].x - instance.nodes[j].x, 2) +
+            pow(instance.nodes[i].y - instance.nodes[j].y, 2) +
+            pow(instance.nodes[i].z - instance.nodes[j].z, 2));
+        instance.distances[j][i] = instance.distances[i][j];
+        
+      } // for
+      printf("\rCalculando matriz de distancias... %.2f%%", 100 * (float)i / instance.dimension);
+      fflush(stdout);
     } // for
-    printf("\rCalculando matriz de distancias... %.2f%%", 100 * (float)i / instance.dimension);
-    fflush(stdout);
-  } // for
-  printf("\rCalculando matriz de distancias... 100%% OK\n");
+    printf("\rCalculando matriz de distancias... 100%% OK\n");
+  }//if
 
   return instance;
 
@@ -127,11 +131,11 @@ void saveTour(Instance instance, int* rota){
 
 }//saveTour
 
-float distance(int o,int d, Instance instance){
+inline float distance(int o,int d, Instance instance){
   return sqrt(
           (instance.nodes[o].x - instance.nodes[d].x)*(instance.nodes[o].x - instance.nodes[d].x) +
           (instance.nodes[o].y - instance.nodes[d].y)*(instance.nodes[o].y - instance.nodes[d].y) +
-          (instance.nodes[o].z - instance.nodes[d].z)*(instance.nodes[o].z - instance.nodes[d].z);
+          (instance.nodes[o].z - instance.nodes[d].z)*(instance.nodes[o].z - instance.nodes[d].z));
 }//distance
 
 Instance displayInstance(Instance instance)
@@ -153,7 +157,7 @@ Instance displayInstance(Instance instance)
   {
     for (int j = 0; j < instance.dimension; j++)
     {
-      printf("Distancia %d %d = %f\n", i, j, instance.distances[i][j]);
+      printf("Distancia %d %d = %f\n", i, j,  distance(i, j, instance));
     } // for
   }   // for
 
@@ -167,11 +171,10 @@ float fitness(Instance instance, int *rota)
   float soma = 0;
 
   for (i = 0; i < instance.dimension - 1; i++){
-    soma += instance.distances[rota[i]][rota[i + 1]];
+    soma += distance(rota[i],rota[i + 1], instance);
   }//for
 
-  soma += instance.distances[rota[i]][rota[0]];
-
+  soma +=  distance(rota[i],rota[0], instance);
   return soma;
 } // fitness method
 
@@ -201,10 +204,11 @@ int *geraRotaAleatoria(int tamanho)
 
 int *geraRotaGulosa(Instance instance)
 {
-  printf("Gerando rota inicial gulosa....");
+  //printf("Gerando rota inicial gulosa....");
   int *rota = (int *)malloc(instance.dimension * sizeof(int));
   bool *visitados = (bool *)malloc(instance.dimension * sizeof(bool));
   float distProx;
+  float distCur;
   int proximo = 0;
   int i, j;
 
@@ -222,9 +226,11 @@ int *geraRotaGulosa(Instance instance)
     distProx = INFINITY;
     for (j = 1; j < instance.dimension; j++)
     {
-      if (instance.distances[proximo][j] < distProx && !visitados[j])
+      
+      distCur = distance(proximo, j, instance);
+      if (distCur < distProx && !visitados[j])
       {
-        distProx = instance.distances[proximo][j];
+        distProx = distCur;
         proximo = j;
       } // if
     }   // for
@@ -234,7 +240,7 @@ int *geraRotaGulosa(Instance instance)
     visitados[proximo] = true;
 
   } // for
-  printf("OK\n");
+  //printf("OK\n");
 
   return rota;
 } // geraRotaGulosa
@@ -248,6 +254,7 @@ int *geraRotaGrasp(Instance instance, float alpha)
   float min, max, corte;
   int cardinalidade, sorteio, contaCandidatos;
   int proximo = 0;
+  float distCur;
 
   // Marca vertices como não visitados
   visitados[0] = true;
@@ -265,13 +272,16 @@ int *geraRotaGrasp(Instance instance, float alpha)
     // Encontra distancia min e max
     for (j = 0; j < instance.dimension; j++)
     {
-      if (instance.distances[proximo][j] > max && !visitados[j])
+
+      distCur = distance(proximo,j,instance);
+      
+      if (distCur > max && !visitados[j])
       {
-        max = instance.distances[proximo][j];
+        max = distCur;
       }
-      if (instance.distances[proximo][j] < min && !visitados[j])
+      if (distCur < min && !visitados[j])
       {
-        min = instance.distances[proximo][j];
+        min = distCur;
       } // if
     }   // for
 
@@ -281,7 +291,7 @@ int *geraRotaGrasp(Instance instance, float alpha)
     cardinalidade = 0;
     for (j = 0; j < instance.dimension; j++)
     {
-      if (instance.distances[proximo][j] <= corte && !visitados[j])
+      if ( distance(proximo,j,instance) <= corte && !visitados[j])
       {
         cardinalidade++;
       } // if
@@ -293,7 +303,7 @@ int *geraRotaGrasp(Instance instance, float alpha)
     contaCandidatos = 0;
     for (j = 0; j < instance.dimension; j++)
     {
-      if (instance.distances[proximo][j] <= corte && !visitados[j])
+      if ( distance(proximo,j,instance) <= corte && !visitados[j])
       {
         if (contaCandidatos == sorteio)
         {
@@ -342,7 +352,10 @@ int runSa2opt(Instance instance, int *rota)
     {
       for (node2 = node1 + 1; node2 < instance.dimension; node2++)
       {
-        delta = -instance.distances[rota[node1]][rota[(node1 + 1) % instance.dimension]] - instance.distances[rota[node2]][rota[(node2 + 1) % instance.dimension]] + instance.distances[rota[node1]][rota[(node2) % instance.dimension]] + instance.distances[rota[(node1 + 1) % instance.dimension]][rota[(node2 + 1) % instance.dimension]];
+        delta = -distance(rota[node1], rota[(node1 + 1) % instance.dimension], instance)
+          -distance(rota[node2], rota[(node2 + 1) % instance.dimension], instance) 
+          +distance(rota[node1], rota[(node2) % instance.dimension], instance)
+          +distance(rota[(node1 + 1) % instance.dimension],rota[(node2 + 1) % instance.dimension], instance);
 
         if (delta < -0.00001 || ((float)(rand() % 1000) < temperatura))
         {
@@ -372,10 +385,10 @@ float run2opt(Instance instance, int *rota)
     {
       for (node2 = node1 + 1; node2 < instance.dimension-1; node2++)
       {
-        delta = -instance.distances[rota[node1]][rota[(node1 + 1) % instance.dimension]] 
-                -instance.distances[rota[node2]][rota[(node2 + 1) % instance.dimension]]
-                +instance.distances[rota[node1]][rota[(node2) % instance.dimension]]
-                +instance.distances[rota[(node1 + 1) % instance.dimension]][rota[(node2 + 1) % instance.dimension]];
+        delta = -distance(rota[node1], rota[(node1 + 1) % instance.dimension], instance)
+                -distance(rota[node2], rota[(node2 + 1) % instance.dimension], instance) 
+                +distance(rota[node1], rota[(node2) % instance.dimension], instance)
+                +distance(rota[(node1 + 1) % instance.dimension],rota[(node2 + 1) % instance.dimension], instance);
 
         if (delta < -0.001)
         {
@@ -409,14 +422,14 @@ float run2vert(Instance instance, int *rota)
     {
       for (node2 = node1 + 2; node2 < instance.dimension; node2++)
       {
-        delta = -instance.distances[rota[node1]][rota[(node1 + 1) % instance.dimension]]
-                -instance.distances[rota[node1]][rota[(node1 - 1) ]]
-                -instance.distances[rota[node2]][rota[(node2 + 1) % instance.dimension]]
-                -instance.distances[rota[node2]][rota[(node2 - 1) ]]
-                +instance.distances[rota[node1]][rota[(node2 + 1) % instance.dimension]]
-                +instance.distances[rota[node1]][rota[(node2 - 1) ]]
-                +instance.distances[rota[node2]][rota[(node1 + 1) % instance.dimension]]
-                +instance.distances[rota[node2]][rota[(node1 - 1) ]];
+        delta = -distance(rota[node1], rota[(node1 + 1) % instance.dimension], instance)
+                -distance(rota[node1], rota[(node1 - 1) ], instance)
+                -distance(rota[node2], rota[(node2 + 1) % instance.dimension], instance)
+                -distance(rota[node2], rota[(node2 - 1) ], instance)
+                +distance(rota[node1], rota[(node2 + 1) % instance.dimension], instance)
+                +distance(rota[node1], rota[(node2 - 1) ], instance)
+                +distance(rota[node2], rota[(node1 + 1) % instance.dimension], instance)
+                +distance(rota[node2], rota[(node1 - 1) ], instance);
         
         
         if (delta < -0.001)
@@ -432,11 +445,14 @@ float run2vert(Instance instance, int *rota)
 
       }// for
     }// for
-    printf("\r Distancia atual 2opt %f",distancia);
   }// while
   distancia = fitness(instance, rota);
   return distancia;
 } // run2vert
+
+double calculaTempo(clock_t initialTick){
+  return (double)(clock() - initialTick) / (CLOCKS_PER_SEC);
+}
 
 
 int main(int argc, char **argv)
@@ -444,42 +460,46 @@ int main(int argc, char **argv)
   srand(time(NULL));
   // srand(1);
 
+  clock_t initialTick = clock();
+
   int *rota = NULL;
   float distancia;
   float minDistancia = INFINITY;
-  Instance instance = readTspFile("data/star10k.tsp");
+  //Instance instance = readTspFile("data/star1k.tsp", false);
+  Instance instance = readTspFile("data/hyg109399.tsp", false);
+
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
 
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < 10000; i++)
   {
     free(rota);
 
 
     //rota = geraRotaAleatoria(instance.dimension);
-    // rota = geraRotaGulosa(instance);
+    //rota = geraRotaGulosa(instance);
     rota = geraRotaGrasp(instance, (rand()%5)/100.0);
     
-    //distancia = fitness(instance, rota);
-    //printf("Distancia GRASP= %f\n", distancia);
+    distancia = fitness(instance, rota);
+    printf("%lf - Distancia GRASP= %f\n", calculaTempo(initialTick), distancia);
 
-    distancia = run2vert(instance, rota);
+    distancia = run2opt(instance, rota);
     //distancia = fitness(instance, rota);
   
     if (distancia < minDistancia)
     {
       minDistancia = distancia;
       memcpy(melhorRota,rota,instance.dimension * sizeof(int));
-      printf("\r%02d - Distancia 2-OPT= %f - Minimo atual: %f", i, distancia, minDistancia);
-      fflush(stdout);
+      saveTour(instance,melhorRota);
     }
 
+      printf("\n %lf - %02d - Distancia 2-OPT= %f - Minimo atual: %f", calculaTempo(initialTick), i, distancia, minDistancia);
+      fflush(stdout);
     // distancia = runSa2opt(instance, rota);
     // printf("Distancia 2opt + SA = %f\n", distancia);
 
   } // for
 
-  saveTour(instance,melhorRota);
   printf("\nDistancia Minima: %f\n", minDistancia);
 
   return 0;
