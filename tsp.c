@@ -15,6 +15,8 @@
 
 #define BUILDMATRIX false
 
+
+
 typedef struct
 {
   float x;
@@ -41,6 +43,18 @@ float distance(int, int, Instance);
 char* getTimeStamp();
 
 
+//DataSets filenames
+char dataSets[8][20]={
+  "star100.tsp",
+  "star1k.tsp",
+  "star10k.tsp",
+  "kj37859.tsp",
+  "hyg109399.tsp"
+  "hyg119614.tsp"
+  "star250k.tsp"
+  "gaia2079471.tsp"
+};
+
 Instance readTspFile(char *fileName, bool buildMatrix)
 {
   char buffer[100];
@@ -48,9 +62,11 @@ Instance readTspFile(char *fileName, bool buildMatrix)
   Instance instance;
   instance.buildMatrix = buildMatrix;
 
+  sprintf(buffer,"data/%s",fileName);
+
   printf("Abrindo arquivo %s\n", fileName);
   // Abre o arquivo .tsp
-  FILE *file = fopen(fileName, "r");
+  FILE *file = fopen(buffer, "r");
   if (file == NULL)
   {
     perror("Erro ao abrir aquivo de entrada:");
@@ -383,7 +399,7 @@ int runSa2opt(Instance instance, int *rota)
   return distancia;
 } // run2opt
 
-float run2opt(Instance instance, int *rota)
+float run2optFirst(Instance instance, int *rota)
 {
   int node1;
   int node2;
@@ -408,12 +424,54 @@ float run2opt(Instance instance, int *rota)
           run2optReverse(rota, node1, node2);
           distancia += delta;
           melhorou = true;
+          
         } // if
       }   // for
     }     // for
     distancia = fitness(instance, rota);
     //printf("Distancia atual 2opt %f\n",distancia);
   }       // while
+  return distancia;
+} // run2opt
+
+float run2optBest(Instance instance, int *rota)
+{
+  int node1;
+  int node2;
+  float distancia = fitness(instance, rota);
+  float delta;
+  bool melhorou = true;
+  float bestDelta = 1000;
+  int bestNode1;
+  int bestNode2;
+
+  while (melhorou)
+  {
+    melhorou = false;
+    for (node1 = 0; node1 < instance.dimension-1; node1++)
+    {
+      for (node2 = node1 + 1; node2 < instance.dimension; node2++)
+      {
+        delta = -distance(rota[node1], rota[(node1 + 1) % instance.dimension], instance)
+                -distance(rota[node2], rota[(node2 + 1) % instance.dimension], instance) 
+                +distance(rota[node1], rota[(node2) % instance.dimension], instance)
+                +distance(rota[(node1 + 1) % instance.dimension],rota[(node2 + 1) % instance.dimension], instance);
+
+        if (delta < 0 && delta < bestDelta){
+          melhorou = true;
+          bestDelta = delta;
+          bestNode1 = node1;
+          bestNode2 = node2;          
+        }// if
+      }// for
+    }// for
+    if(melhorou){
+      run2optReverse(rota, bestNode1, bestNode2);
+      distancia = fitness(instance, rota);
+      //distancia += bestDelta;
+    }//
+    //printf("Distancia atual 2opt %f - N1: %d N2: %d\n",distancia, bestNode1, bestNode2);
+  }// while
   return distancia;
 } // run2opt
 
@@ -476,7 +534,7 @@ char* getTimeStamp(){
   time ( &rawtime );
   timeinfo = localtime ( &rawtime );
 
-  sprintf(buffer, "%d %d %d %d:%d:%d", timeinfo->tm_mday,
+  sprintf(buffer, "%02d %02d %04d %02d:%02d:%02d", timeinfo->tm_mday,
             timeinfo->tm_mon + 1, timeinfo->tm_year + 1900,
             timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
   return buffer;
@@ -494,26 +552,26 @@ int main(int argc, char **argv)
   int *rota = NULL;
   float distancia;
   float minDistancia = INFINITY;
-  Instance instance = readTspFile("data/star1k.tsp", false);
-  //Instance instance = readTspFile("data/star10k.tsp", false);
+  //Instance instance = readTspFile("kj37859.tsp", false);
+  Instance instance = readTspFile(dataSets[1], false);
 
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
 
 
-  for (int i = 0; i < 10000; i++)
+  for (int i = 0; i < 1000000; i++)
   {
     free(rota);
 
 
     //rota = geraRotaAleatoria(instance.dimension);
     //rota = geraRotaGulosa(instance);
-    rota = geraRotaGrasp(instance, (rand()%5)/100.0);
+    rota = geraRotaGrasp(instance, (rand()%10)/100.0);
     
     distancia = fitness(instance, rota);
     printf("%lf - GRASP= %f - ", calculaTempo(initialTick), distancia);
 
-    distancia = run2opt(instance, rota);
+    distancia = run2optFirst(instance, rota);
     //distancia = fitness(instance, rota);
   
     if (distancia < minDistancia)
