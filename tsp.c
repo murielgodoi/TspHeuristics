@@ -475,6 +475,49 @@ float run2optBest(Instance instance, int *rota)
   return distancia;
 } // run2opt
 
+float run2optShake(Instance instance, int* rota, int intensity, int shake){
+  float distancia;
+  float minDistancia;
+  float distanciaInicial;
+  int node1, node2, troca;
+
+  int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
+  
+  distancia = run2optFirst(instance, rota);
+  distanciaInicial = distancia;
+  minDistancia = distancia;
+
+  for (int i = 0; i < shake; i++){
+
+    for (int j = 0; j < intensity; j++){
+    
+      node1 = (rand()% instance.dimension-1)+1;
+      node2 = (rand()% instance.dimension-1)+1;
+
+      troca = rota[node1];
+      rota[node1] = rota[node2];
+      rota[node2] = troca;
+    }//for shake intensity
+
+    distancia = run2optFirst(instance, rota);
+    //printf("Distancia atual shake %f\n",distancia);
+
+   //Save best results, if found
+   if (distancia < minDistancia)
+    {
+      minDistancia = distancia;
+      memcpy(melhorRota,rota,instance.dimension * sizeof(int));
+    }
+  }//for shake interations
+
+  memcpy(rota,melhorRota,instance.dimension * sizeof(int));
+  //free(melhorRota);
+  if(minDistancia < distanciaInicial ){
+    printf("Shake melhorou: de %f para %f\n",distanciaInicial, minDistancia);
+  }
+  return minDistancia;
+}//run2optShake
+
 
 float run2vert(Instance instance, int *rota)
 {
@@ -553,13 +596,13 @@ int main(int argc, char **argv)
   float distancia;
   float minDistancia = INFINITY;
   //Instance instance = readTspFile("kj37859.tsp", false);
-  Instance instance = readTspFile(dataSets[1], false);
+  Instance instance = readTspFile(dataSets[2], false);
 
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
 
 
-  for (int i = 0; i < 1000000; i++)
+  for (int i = 0; i < 1000; i++)
   {
     free(rota);
 
@@ -571,7 +614,8 @@ int main(int argc, char **argv)
     distancia = fitness(instance, rota);
     printf("%lf - GRASP= %f - ", calculaTempo(initialTick), distancia);
 
-    distancia = run2optFirst(instance, rota);
+    distancia = run2optShake(instance, rota, 1, 10);
+    //distancia = run2optFirst(instance, rota);
     //distancia = fitness(instance, rota);
   
     if (distancia < minDistancia)
