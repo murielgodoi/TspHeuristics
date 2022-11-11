@@ -15,8 +15,6 @@
 
 #define BUILDMATRIX false
 
-
-
 typedef struct
 {
   float x;
@@ -49,9 +47,9 @@ char dataSets[8][20]={
   "star1k.tsp",
   "star10k.tsp",
   "kj37859.tsp",
-  "hyg109399.tsp"
-  "hyg119614.tsp"
-  "star250k.tsp"
+  "hyg109399.tsp",
+  "hyg119614.tsp",
+  "star250k.tsp",
   "gaia2079471.tsp"
 };
 
@@ -155,6 +153,20 @@ void saveTour(Instance instance, int* rota){
   free(timestamp);
 
 }//saveTour
+
+FILE* createLogFile(Instance instance){
+  char filename[120];
+  char* timestamp = getTimeStamp();
+
+  sprintf(filename,"logs/Log %s.csv",instance.nome);
+  FILE* logFile = fopen(filename,"w");
+
+  //fprintf(logFile,"Execution,Alpha, GraspDistance, CurrentDistance, BestCurrentDistance\n");
+
+  return logFile;
+
+}
+
 
 float distance(int o,int d, Instance instance){
   if(BUILDMATRIX){
@@ -568,6 +580,10 @@ double calculaTempo(clock_t initialTick){
   return (double)(clock() - initialTick) / (CLOCKS_PER_SEC);
 }
 
+double calculaDiferencaTempo(clock_t initialTick, clock_t finalTick){
+  return (double)(finalTick - initialTick) / (CLOCKS_PER_SEC);
+}
+
 char* getTimeStamp(){
   char* buffer = (char*) malloc(100* sizeof(char));
   time_t rawtime;
@@ -591,31 +607,53 @@ int main(int argc, char **argv)
   srand(1);
 
   clock_t initialTick = clock();
+  clock_t loopStartTick;
+  clock_t graspTick;
+  clock_t optTick;
+  float alpha;
 
   int *rota = NULL;
   float distancia;
+  float distanciaGrasp;
   float minDistancia = INFINITY;
+
   //Instance instance = readTspFile("kj37859.tsp", false);
-  Instance instance = readTspFile(dataSets[2], false);
+  Instance instance = readTspFile(dataSets[0], false);
 
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
 
+  FILE* logFile;
+ 
+    logFile = createLogFile( instance );
+    for ( alpha = 0; alpha <= 0.2; alpha = alpha + 0.01)
+    {
+      if(alpha==0){
+        fprintf(logFile,"%f",alpha);
+      }else{
+        fprintf(logFile,",%f",alpha);
+      }
+    }
+    fprintf(logFile,"\n");
+    minDistancia = INFINITY;
+    printf("Alpha %f\n",alpha);
 
-  for (int i = 0; i < 1000; i++)
+  for (int i = 1; i <= 1000; i++)
   {
+    for ( alpha = 0; alpha <= 0.2; alpha = alpha + 0.01)
+    {
     free(rota);
 
-
+    loopStartTick = clock();
     //rota = geraRotaAleatoria(instance.dimension);
     //rota = geraRotaGulosa(instance);
-    rota = geraRotaGrasp(instance, (rand()%10)/100.0);
+    rota = geraRotaGrasp(instance, alpha);
     
-    distancia = fitness(instance, rota);
-    printf("%lf - GRASP= %f - ", calculaTempo(initialTick), distancia);
+    distanciaGrasp = fitness(instance, rota);
+    //printf("%lf - GRASP= %f - ", calculaTempo(initialTick), distanciaGrasp);
 
-    distancia = run2optShake(instance, rota, 1, 10);
-    //distancia = run2optFirst(instance, rota);
+    //distancia = run2optShake(instance, rota, 1, 10);
+    distancia = run2optFirst(instance, rota);
     //distancia = fitness(instance, rota);
   
     if (distancia < minDistancia)
@@ -625,12 +663,21 @@ int main(int argc, char **argv)
       saveTour(instance,melhorRota);
     }
 
-      printf("%lf - %02d - 2-OPT= %f - Best: %f\n", calculaTempo(initialTick), i, distancia, minDistancia);
-      fflush(stdout);
+      //printf("%lf - %02d - 2-OPT= %f - Best: %f\n", calculaTempo(initialTick), i, distancia, minDistancia);
+      if(alpha==0){
+        fprintf(logFile,"%f", distancia);
+      }else{
+        fprintf(logFile,",%f", distancia);
+      }
+      fflush(logFile);
+      //fflush(stdout);
     // distancia = runSa2opt(instance, rota);
     // printf("Distancia 2opt + SA = %f\n", distancia);
-
-  } // for
+    }//forAlpha
+  fprintf(logFile,"\n" );
+  } // forExecutions
+  
+  fclose(logFile);
 
   printf("\nDistancia Minima: %f\n", minDistancia);
 
