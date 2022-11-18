@@ -1,0 +1,47 @@
+Heuristicas TSP usando GRASP+2opt
+Autor: Muriel de Souza Godoi
+
+Arquivos:
+tsp.c ==> código fonte do programa
+/data ==> pasta com as instancias
+/optimal ==> pasta com os tours ótimos da literatura
+/results ==> pasta onde serão salvos os arquivos dos tours gerados pelo programa
+
+===============================================
+
+Para compilar o programa utilize:
+Linux:
+gcc tsp.c -lm -O3 -w -o tsp
+
+Windows:
+gcc tsp.c -lm -O3 -w -o tsp.exe
+
+===============================================
+
+Para executar o sistema utilize os parâmetros:
+
+Linux:
+./tsp <instancia> <qte de execuções>
+
+Windows:
+tsp.exe <instancia> <qte de execuções>
+
+===============================================
+
+As instancias devem estar entre 0 e 5
+
+Instancia 0 ->     100 estrelas
+Instancia 1 ->   1.000 estrelas
+Instancia 2 ->  10.000 estrelas
+Instancia 3 ->  37.859 estrelas
+Instancia 4 -> 109.399 estrelas
+Instancia 5 -> 250.000 estrelas
+
+===============================================
+Saída:
+
+Os dados resumidos serão exibidos na tela.
+As rotas geradas serão salvas em arquivos .tour (TSPLIB) na pasta results
+
+Para interromper a execução pressione CTRL-C a qualquer momento
+

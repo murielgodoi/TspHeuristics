@@ -1,11 +1,12 @@
 /**
  * @file tsp.c
- * @author Muriel Godoi (muriel@utfpr.edu.br)
- * @brief
- * @version 0.1
- * @date 2022-10-01
+ * @author Muriel de Souza Godoi (muriel@utfpr.edu.br)
+ * @brief Implementação da metaheurística GRASP + busca local 2opt 
+ * @version 0.2
+ * @date 2022-11-10 (Last Version)
  *
  */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,8 +14,11 @@
 #include <time.h>
 #include <stdbool.h>
 
+//Constantes
 #define BUILDMATRIX false
 
+
+//Definição as estruturas
 typedef struct
 {
   float x;
@@ -48,9 +52,7 @@ char dataSets[8][20]={
   "star10k.tsp",
   "kj37859.tsp",
   "hyg109399.tsp",
-  "hyg119614.tsp",
-  "star250k.tsp",
-  "gaia2079471.tsp"
+  "star250k.tsp"
 };
 
 Instance readTspFile(char *fileName, bool buildMatrix)
@@ -154,6 +156,12 @@ void saveTour(Instance instance, int* rota){
 
 }//saveTour
 
+/**
+ * @brief Create a Log File object
+ * 
+ * @param instance 
+ * @return FILE* 
+ */
 FILE* createLogFile(Instance instance){
   char filename[120];
   char* timestamp = getTimeStamp();
@@ -167,6 +175,14 @@ FILE* createLogFile(Instance instance){
 
 }
 
+/**
+ * @brief Calcula a distancia entre dois vértices tridimensionais
+ * 
+ * @param o vértice de origem
+ * @param d vértice de destino
+ * @param instance instancia utilizada
+ * @return float distancia entre os vértices
+ */
 
 float distance(int o,int d, Instance instance){
   if(BUILDMATRIX){
@@ -179,7 +195,12 @@ float distance(int o,int d, Instance instance){
   }//else
 }//distance
 
-Instance displayInstance(Instance instance)
+/**
+ * @brief Exibe na tela os dados de uma instancia
+ * 
+ * @param instance instância a ser exibida
+ */
+void displayInstance(Instance instance)
 {
 
   printf("Nome: %s\n", instance.nome);
@@ -202,10 +223,17 @@ Instance displayInstance(Instance instance)
     } // for
   }   // for
 
-  return instance;
+  return;
 
 } // displayInstance method
 
+/**
+ * @brief Calcula o custo da rota para a instancia especificada
+ * 
+ * @param instance instanca a ser utilizada
+ * @param rota rota a ser avaliada
+ * @return float custo da rota
+ */
 float fitness(Instance instance, int *rota)
 {
   int i;
@@ -219,6 +247,12 @@ float fitness(Instance instance, int *rota)
   return soma;
 } // fitness method
 
+/**
+ * @brief Gera uma rota aleatória para uma instancia de tamanho tamanho
+ * 
+ * @param tamanho tamanho da rota a ser gerada
+ * @return int* vetor de inteiros contendo a rota
+ */
 int *geraRotaAleatoria(int tamanho)
 {
   int trocaPos;
@@ -243,6 +277,12 @@ int *geraRotaAleatoria(int tamanho)
   return rota;
 } // geraRotaAleatoria método
 
+/**
+ * @brief Cria uma rota utilizando a estrátégia gulosa (vizinho mais próximo)
+ * 
+ * @param instance instancia a ser utilizada
+ * @return int* vetor de inteiros contendo a rota gulosa
+ */
 int *geraRotaGulosa(Instance instance)
 {
   //printf("Gerando rota inicial gulosa....");
@@ -286,6 +326,13 @@ int *geraRotaGulosa(Instance instance)
   return rota;
 } // geraRotaGulosa
 
+/**
+ * @brief Cria 
+ * 
+ * @param instance 
+ * @param alpha 
+ * @return int* vetor de inteiros contendo a rota
+ */
 int *geraRotaGrasp(Instance instance, float alpha)
 {
   int *rota = (int *)malloc(instance.dimension * sizeof(int));
@@ -326,9 +373,10 @@ int *geraRotaGrasp(Instance instance, float alpha)
       } // if
     }   // for
 
-    // Calcula cardinalidade
+    //Calcula custo de corte
     corte = min + (alpha * (max - min));
 
+    // Calcula cardinalidade da LRC
     cardinalidade = 0;
     for (j = 0; j < instance.dimension; j++)
     {
@@ -338,14 +386,17 @@ int *geraRotaGrasp(Instance instance, float alpha)
       } // if
     }   // for
 
+    //Sorteia um candidato da LRC
     sorteio = rand() % cardinalidade;
 
-    // Procura o valor sorteado
+    // Procura o candidato sorteado na RLC
     contaCandidatos = 0;
     for (j = 0; j < instance.dimension; j++)
     {
+      //Verifica se é um candidato da RLC
       if ( distance(proximo,j,instance) <= corte && !visitados[j])
       {
+        //Verifica se é o candidato sorteado
         if (contaCandidatos == sorteio)
         {
           proximo = j;
@@ -355,6 +406,7 @@ int *geraRotaGrasp(Instance instance, float alpha)
 
       } // if
     }   // for
+    
     // Adiciona na rota
     rota[i] = proximo;
     visitados[proximo] = true;
@@ -411,6 +463,13 @@ int runSa2opt(Instance instance, int *rota)
   return distancia;
 } // run2opt
 
+/**
+ * @brief Executa o algoritmo 2opt First Improvement
+ * 
+ * @param instance instancia a ser considerada
+ * @param rota rota inicial a ser melhorada
+ * @return float custo da rota melhorada
+ */
 float run2optFirst(Instance instance, int *rota)
 {
   int node1;
@@ -418,6 +477,16 @@ float run2optFirst(Instance instance, int *rota)
   float distancia = fitness(instance, rota);
   float delta;
   bool melhorou = true;
+
+  /*
+  //Utilizado para gerar o log para o gráfico do 2opt
+  int interations = 0; 
+  char filename[100];
+  char* timestamp = getTimeStamp();
+  sprintf(filename,"log2opt-%s.txt",timestamp);
+  FILE* logFile = fopen(filename,"w");
+  fprintf(logFile,"%f\n",distancia);
+  */
 
   while (melhorou)
   {
@@ -438,14 +507,25 @@ float run2optFirst(Instance instance, int *rota)
           melhorou = true;
           
         } // if
+        //interations++;
+        //fprintf(logFile,"%i, %f\n",interations, distancia);
       }   // for
     }     // for
     distancia = fitness(instance, rota);
+    
     //printf("Distancia atual 2opt %f\n",distancia);
   }       // while
+  //fclose(logFile);
   return distancia;
 } // run2opt
 
+/**
+ * @brief Executa o algoritmo 2opt Best Improvement
+ * 
+ * @param instance instancia a ser considerada
+ * @param rota rota inicial a ser melhorada
+ * @return float custo da rota melhorada
+ */
 float run2optBest(Instance instance, int *rota)
 {
   int node1;
@@ -487,6 +567,13 @@ float run2optBest(Instance instance, int *rota)
   return distancia;
 } // run2opt
 
+/**
+ * @brief Executa o algoritmo 2opt com estratégia de perturbação (Shake)
+ * 
+ * @param instance instancia a ser considerada
+ * @param rota rota inicial a ser melhorada
+ * @return float custo da rota melhorada
+ */
 float run2optShake(Instance instance, int* rota, int intensity, int shake){
   float distancia;
   float minDistancia;
@@ -576,14 +663,35 @@ float run2vert(Instance instance, int *rota)
   return distancia;
 } // run2vert
 
+//Funções auxiliares para exibir o tempo durante a execução
+
+
+/**
+ * @brief Calcula a diferença de tempo em segundos um timestamp e o tempo atual
+ * 
+ * @param initialTick tempo inicial
+ * @return double diferença entre os tempos em segundos
+ */
 double calculaTempo(clock_t initialTick){
   return (double)(clock() - initialTick) / (CLOCKS_PER_SEC);
 }
 
+/**
+ * @brief Calcula a diferença de tempo em segundos entre 2 timestamps
+ * 
+ * @param initialTick tempo inicial
+ * @param finalTick tempo final
+ * @return double diferença entre os tempos em segundos
+ */
 double calculaDiferencaTempo(clock_t initialTick, clock_t finalTick){
   return (double)(finalTick - initialTick) / (CLOCKS_PER_SEC);
 }
 
+/**
+ * @brief Gera e retora uma string contendo o timestamp
+ * 
+ * @return char* string contendo o timestamp com data e hora
+ */
 char* getTimeStamp(){
   char* buffer = (char*) malloc(100* sizeof(char));
   time_t rawtime;
@@ -600,11 +708,107 @@ char* getTimeStamp(){
 
 }//timeStamp
 
+/**
+ * @brief Função criada para avaliar o alpha do GRASP
+ * 
+ * @param instance instancia a ser avaliada
+ * @param runs quantidade de execuções para cada valor de alpha
+ */
+void evaluateAlpha(Instance instance, int runs){
+  FILE* logFile;
+
+  float alpha;
+  int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
+
+  int *rota = NULL;
+  float distancia;
+  float distanciaGrasp;
+  float minDistancia = INFINITY;
+ 
+    logFile = createLogFile( instance );
+    //Escreve o cabeçalho no arquivo de log
+    for ( alpha = 0; alpha <= 1; alpha = alpha + 0.025)
+    {
+      if(alpha==0){
+        fprintf(logFile,"%f",alpha);
+      }else{
+        fprintf(logFile,",%f",alpha);
+      }//else
+    }
+    fprintf(logFile,"\n");
+    minDistancia = INFINITY;
+    printf("Alpha %f\n",alpha);
+
+  //Executa o algoritmo "runs" vezes
+  for (int i = 1; i <= runs; i++)
+  {
+    //Para cada valor de alpha
+    for ( alpha = 0; alpha <= 1; alpha = alpha + 0.025)
+    {
+    free(rota);
+
+    rota = geraRotaGrasp(instance, alpha);
+    
+    distanciaGrasp = fitness(instance, rota);
+
+    distancia = run2optFirst(instance, rota);
+  
+    if (distancia < minDistancia)
+    {
+      minDistancia = distancia;
+      memcpy(melhorRota,rota,instance.dimension * sizeof(int));
+      saveTour(instance,melhorRota);
+    }
+
+      //Salva os valores obtidos no log
+      if(alpha==0){
+        fprintf(logFile,"%f", distancia);// primeita coluna csv
+      }else{
+        fprintf(logFile,",%f", distancia);// demais colunas
+      }//else
+      fflush(logFile);
+      
+    }//forAlpha
+    fprintf(logFile,"\n" );
+  } // forExecutions
+
+  //Fecha arquivo de log
+  fclose(logFile);
+}
+
 
 int main(int argc, char **argv)
 {
-  //srand(time(NULL));
   srand(1);
+  int execucoes;
+  int base;
+
+  if (argc == 3){// Verifica se os argumentos foram passados
+    execucoes = atoi(argv[2]);
+    base = atoi(argv[1]);
+    if(execucoes < 0){ //
+      printf("Erro: O número de execuções não pode ser negativa!\n");
+      exit(1);
+    }//if
+    if(base < 0 || base > 5){
+      printf("Erro: A instancia escolhida deve estar entre 0 e 5\n");
+      exit(1);
+    }
+  }else{ // Exibe instruções caso não receber os parâmetros
+    printf("Heuristicas TSP usando GRASP+2opt\n");
+    printf("Autor: Muriel de Souza Godoi\n\n");
+    printf("Para utilizar esse sistema execute com os parâmetros:\n");
+    printf("\n./tsp <instancia> <qte de execuções> (linux)\n");
+    printf("As instancias devem estar entre 0 e 5\n\n");
+    printf("Instancia 0 ->     100 estrelas\n");
+    printf("Instancia 1 ->   1.000 estrelas\n");
+    printf("Instancia 2 ->  10.000 estrelas\n");
+    printf("Instancia 3 ->  37.859 estrelas\n");
+    printf("Instancia 4 -> 109.399 estrelas\n");
+    printf("Instancia 5 -> 250.000 estrelas\n\n");
+
+    exit(1);
+  }//else
 
   clock_t initialTick = clock();
   clock_t loopStartTick;
@@ -616,45 +820,39 @@ int main(int argc, char **argv)
   float distancia;
   float distanciaGrasp;
   float minDistancia = INFINITY;
+  float minGrasp = INFINITY;
 
-  //Instance instance = readTspFile("kj37859.tsp", false);
-  Instance instance = readTspFile(dataSets[7], false);
+  Instance instance = readTspFile(dataSets[base], false);
 
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
 
-  FILE* logFile;
- 
-    logFile = createLogFile( instance );
-    for ( alpha = 0; alpha <= 0.2; alpha = alpha + 0.01)
-    {
-      if(alpha==0){
-        fprintf(logFile,"%f",alpha);
-      }else{
-        fprintf(logFile,",%f",alpha);
-      }
-    }
-    fprintf(logFile,"\n");
-    minDistancia = INFINITY;
-    printf("Alpha %f\n",alpha);
-
-  for (int i = 1; i <= 30; i++)
+  for (int i = 1; i <= execucoes; i++)
   {
-    for ( alpha = 0; alpha <= 0.2; alpha = alpha + 0.01)
-    {
     free(rota);
 
     loopStartTick = clock();
     //rota = geraRotaAleatoria(instance.dimension);
     //rota = geraRotaGulosa(instance);
-    rota = geraRotaGrasp(instance, alpha);
     
-    distanciaGrasp = fitness(instance, rota);
-    printf("%lf - GRASP= %f - ", calculaTempo(initialTick), distanciaGrasp);
+    if(i == 1){ //Executa uma vez com a busca 100% gulosa
+      rota = geraRotaGrasp(instance, 0);
+    }else{
+      rota = geraRotaGrasp(instance, 0.01 + (rand()%5) * 0.01);
+    }//else
+    
+    distancia = fitness(instance, rota);
+
+    if (distancia < minGrasp){
+      minGrasp = distancia;
+    }//if
+    printf("%i - %.1lfs - GRASP %f, ", i, calculaTempo(initialTick), distancia,  minDistancia);
+    fflush(stdout);
 
     //distancia = run2optShake(instance, rota, 1, 10);
-    distancia = run2optFirst(instance, rota);
     //distancia = fitness(instance, rota);
+    
+    distancia = run2optFirst(instance, rota);
   
     if (distancia < minDistancia)
     {
@@ -662,22 +860,10 @@ int main(int argc, char **argv)
       memcpy(melhorRota,rota,instance.dimension * sizeof(int));
       saveTour(instance,melhorRota);
     }
+    printf("%.1lfs - 2OPT= %f - BG: %f - BL: %f\n", calculaTempo(initialTick),  distancia, minGrasp, minDistancia);
+    fflush(stdout);
 
-      printf("%lf - %02d - 2-OPT= %f - Best: %f\n", calculaTempo(initialTick), i, distancia, minDistancia);
-      if(alpha==0){
-        fprintf(logFile,"%f", distancia);
-      }else{
-        fprintf(logFile,",%f", distancia);
-      }
-      fflush(logFile);
-      //fflush(stdout);
-    // distancia = runSa2opt(instance, rota);
-    // printf("Distancia 2opt + SA = %f\n", distancia);
-    }//forAlpha
-  fprintf(logFile,"\n" );
   } // forExecutions
-  
-  fclose(logFile);
 
   printf("\nDistancia Minima: %f\n", minDistancia);
 
