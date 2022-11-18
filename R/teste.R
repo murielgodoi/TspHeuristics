@@ -8,7 +8,7 @@ getwd()
 
 setwd("/home/muriel/github/TspHeuristics/R/")
 
-tabela <- read.table("data100r.csv",header=TRUE,sep=",")
+tabela <- read.table("data1k-30.csv",header=TRUE,sep=",")
 
 
 

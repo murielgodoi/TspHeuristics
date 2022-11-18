@@ -618,7 +618,7 @@ int main(int argc, char **argv)
   float minDistancia = INFINITY;
 
   //Instance instance = readTspFile("kj37859.tsp", false);
-  Instance instance = readTspFile(dataSets[0], false);
+  Instance instance = readTspFile(dataSets[7], false);
 
   int* melhorRota = (int*) malloc(instance.dimension * sizeof(int));
   // displayInstance(instance);
@@ -638,7 +638,7 @@ int main(int argc, char **argv)
     minDistancia = INFINITY;
     printf("Alpha %f\n",alpha);
 
-  for (int i = 1; i <= 1000; i++)
+  for (int i = 1; i <= 30; i++)
   {
     for ( alpha = 0; alpha <= 0.2; alpha = alpha + 0.01)
     {
@@ -650,7 +650,7 @@ int main(int argc, char **argv)
     rota = geraRotaGrasp(instance, alpha);
     
     distanciaGrasp = fitness(instance, rota);
-    //printf("%lf - GRASP= %f - ", calculaTempo(initialTick), distanciaGrasp);
+    printf("%lf - GRASP= %f - ", calculaTempo(initialTick), distanciaGrasp);
 
     //distancia = run2optShake(instance, rota, 1, 10);
     distancia = run2optFirst(instance, rota);
@@ -663,7 +663,7 @@ int main(int argc, char **argv)
       saveTour(instance,melhorRota);
     }
 
-      //printf("%lf - %02d - 2-OPT= %f - Best: %f\n", calculaTempo(initialTick), i, distancia, minDistancia);
+      printf("%lf - %02d - 2-OPT= %f - Best: %f\n", calculaTempo(initialTick), i, distancia, minDistancia);
       if(alpha==0){
         fprintf(logFile,"%f", distancia);
       }else{
